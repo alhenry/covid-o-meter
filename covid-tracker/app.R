@@ -41,7 +41,8 @@ df_all <- reduce(list(df_case, df_death),
                  full_join, by = c("area", "country", "Lat", "Long", "date")) %>% 
     mutate(country = recode(country,
                             `United Kingdom` = "UK",
-                            `Korea, South` = "South Korea"),
+                            `Korea, South` = "South Korea",
+                            `Taiwan*` = "Taiwan"),
            date = mdy(date))
 
 countries <- df_all$country %>% unique
@@ -59,7 +60,7 @@ top_countries <- df_all %>%
 
 to_include <- c(
     top_countries,
-    "India", "Japan", "Indonesia", "Singapore", "Taiwan", "South Korea"
+    "India", "Japan", "Indonesia", "Singapore", "Brazil", "South Korea"
 ) %>% unique
 
 # to_highlight <- c("UK", "US", "China", "Italy", "Indonesia", "South Korea", "")
@@ -67,6 +68,7 @@ to_include <- c(
 # Set global options for interactive
 girafe_mod <- function(...){
     girafe(..., width_svg = 8, height_svg = 6,
+           fonts = list(sans = "Lato"),
            options = list(
                opts_sizing(rescale = T, width = 1),
                opts_tooltip(use_fill = T, opacity = 0.95),
@@ -101,19 +103,18 @@ ui <- navbarPage("Covid-19 Tracker",
         draggable = TRUE,
         
         h3("Data"),
-        selectizeInput('to_include_case', 'Countries to include (max 20)', multiple = T,
+        selectizeInput('to_include_case', 'Countries (max 20)', multiple = T,
                        choices = countries,
                        selected = to_include,
                        options = list(maxItems = 20)),
-        dateRangeInput('date_case', 'Range of dates to include', 
+        dateRangeInput('date_case', 'Date range', 
                        start = date_start, end = date_end),
         
         # parameters for plots
         h3("Plot Parameters"),
         
         sliderInput('case_day1', 'Minimum cases for day 1',
-                    min = 1, max = 1000,
-                    value = 100),
+                    min = 1, max = 300, value = 100),
         sliderInput('day_range_case', 'Range of days to display',
                     min = 1, max = max_day, value = c(1,40), step = 1),
         
@@ -141,10 +142,10 @@ ui <- navbarPage("Covid-19 Tracker",
             draggable = TRUE,
             
             h3("Data"),
-            selectizeInput('to_include_death', 'Countries to include', multiple = T,
+            selectizeInput('to_include_death', 'Countries', multiple = T,
                            choices = countries,
                            selected = to_include),
-            dateRangeInput('date_death', 'Range of dates to include', 
+            dateRangeInput('date_death', 'Date range', 
                            start = date_start, end = date_end),
             
             # parameters for plots
@@ -181,16 +182,15 @@ ui <- navbarPage("Covid-19 Tracker",
             
             
             h3("Data"),
-            selectizeInput('to_include_anim', 'Countries to include', multiple = T,
+            selectizeInput('to_include_anim', 'Countries', multiple = T,
                            choices = countries, selected = to_include),
-            dateRangeInput('date_anim', 'Range of dates to include', 
+            dateRangeInput('date_anim', 'Date range', 
                            start = date_start, end = date_end),
             
             # Animation parameters
             h3("Plot parameters"),
             sliderInput('case_day1_anim', 'Minimum cases for day 1',
-                        min = 1, max = 1000,
-                        value = 100),
+                        min = 1, max = 300, value = 100),
             sliderInput('death_day1_anim', 'Minimum deaths for day 1',
                         min = 1, max = 100, value = 10),
             sliderInput('day_range_anim', 'Range of days to display',
@@ -198,7 +198,7 @@ ui <- navbarPage("Covid-19 Tracker",
             
             # # Action button
             h3("\n"),
-            actionButton("animate", "Make animation")
+            actionButton("animate", "Update animation")
             
             
         )
@@ -211,7 +211,12 @@ ui <- navbarPage("Covid-19 Tracker",
 # ===========
 server <- function(input, output) {
     # Helper functions -------
-    make_exp_break <- function(x,n) map(x, `*`, c(1, 10^seq(n))) %>% unlist %>% sort
+    exp_breaks <- function(lims, base_breaks = c(1,2,5)) {
+      lower <- log10(lims[1]) %>% floor
+      upper <- log10(lims[2]) %>% ceiling
+      
+      map(base_breaks, `*`, c(10^seq(lower, upper))) %>% unlist %>% sort
+    }
     
     make_df_plot <- function(df, metric, max_day, n_start){
         metric <- rlang::enquo(metric)
@@ -284,25 +289,29 @@ server <- function(input, output) {
             summarise_at(vars(case), sum)
     }, ignoreNULL = F)
     
+    plot_pars_case <- eventReactive(input$make_plot_case,{
+      list(min_day = input$day_range_case[1],
+           max_day = input$day_range_case[2],
+           n_start = input$case_day1)
+    }, ignoreNULL = F)
+    
     # Case plot
     output$case_plot <- renderGirafe({
         df <- df_reactive_case()
-
-        min_day <- input$day_range_case[1]
-        max_day <- input$day_range_case[2]
-        n_start <- input$case_day1
+        
+        pars <- plot_pars_case()
+        min_day <- pars$min_day
+        max_day <- pars$max_day
+        n_start <- pars$n_start
         
         df_plot <- make_df_plot(df, case, max_day, n_start) %>% 
             make_tooltip(case, n_start, "cases", "cases")
         
-        # to_highlight <- input$to_highlight
-        y_breaks <- c(100,200,500) %>% make_exp_break(3)
-        
         plot <- make_plot(df_plot, case, min_day) +
-            scale_y_continuous(trans = "log", breaks = y_breaks, labels = scales::comma) +
+            scale_y_continuous(trans = "log", breaks = exp_breaks, labels = scales::number_format(accuracy = 1)) +
             labs(title = glue("Number of cases"),
                  y = "Number of cases (log scale)",
-                 x = glue("Day after the first {n_start} cases"))
+                 x = glue("Day after first {n_start} cases"))
         
         girafe_mod(ggobj = plot)    
     })
@@ -311,9 +320,10 @@ server <- function(input, output) {
     output$case_growth <- renderGirafe({
         df <- df_reactive_case()
         
-        min_day <- input$day_range_case[1]
-        max_day <- input$day_range_case[2]
-        n_start <- input$case_day1
+        pars <- plot_pars_case()
+        min_day <- pars$min_day
+        max_day <- pars$max_day
+        n_start <- pars$n_start
         
         df_plot <- make_df_plot(df, case, max_day, n_start) %>% 
             mutate(case_growth = case / lag(case))  %>% 
@@ -324,7 +334,7 @@ server <- function(input, output) {
         plot <- make_plot(df_plot, case_growth, min_day) +
             labs(title = glue("Daily case growth rate"),
                  y = "Daily case growth rate",
-                 x = glue("Day after the first {n_start} cases"))
+                 x = glue("Day after first {n_start} cases"))
         
         girafe_mod(ggobj = plot)
     })
@@ -346,24 +356,29 @@ server <- function(input, output) {
             summarise_at(vars(case,death), sum)
     }, ignoreNULL = F)
     
+    plot_pars_death <- eventReactive(input$make_plot_death,{
+      list(min_day = input$day_range_death[1],
+           max_day = input$day_range_death[2],
+           n_start = input$death_day1)
+    }, ignoreNULL = F)
+    
     # Death plot
     output$death_plot <- renderGirafe({
         df <- df_reactive_death()
         
-        min_day <- input$day_range_death[1]
-        max_day <- input$day_range_death[2]
-        n_start <- input$death_day1
+        pars <- plot_pars_death()
+        min_day <- pars$min_day
+        max_day <- pars$max_day
+        n_start <- pars$n_start
         
         df_plot <- make_df_plot(df, death, max_day, n_start) %>% 
             make_tooltip(death, n_start, "deaths", "deaths")
         
-        y_breaks <- c(10,20,50) %>% make_exp_break(3)
-        
         plot <- make_plot(df_plot, death, min_day) +
-            scale_y_continuous(trans = "log", breaks = y_breaks, labels = scales::comma) +
+            scale_y_continuous(trans = "log", breaks = exp_breaks, labels = scales::number_format(accuracy = 1)) +
             labs(title = glue("Number of deaths"),
                  y = "Number of deaths (log scale)",
-                 x = glue("Day after the first {n_start} deaths"))
+                 x = glue("Day after first {n_start} deaths"))
         
         girafe_mod(ggobj = plot)
     })
@@ -372,9 +387,10 @@ server <- function(input, output) {
     output$cfr_plot <- renderGirafe({
         df <- df_reactive_death()
         
-        min_day <- input$day_range_death[1]
-        max_day <- input$day_range_death[2]
-        n_start <- input$death_day1
+        pars <- plot_pars_death()
+        min_day <- pars$min_day
+        max_day <- pars$max_day
+        n_start <- pars$n_start
         
         df_plot <- make_df_plot(df, death, max_day, n_start) %>% 
             mutate(cfr = death/case) %>% 
@@ -383,7 +399,7 @@ server <- function(input, output) {
         plot <- make_plot(df_plot, cfr, min_day) +
             labs(title = glue("Case fatality rate"),
                  y = "Case fatality rate",
-                 x = glue("Day after the first {n_start} cases"))
+                 x = glue("Day after first {n_start} cases"))
         
         girafe_mod(ggobj = plot)
     })
@@ -392,9 +408,10 @@ server <- function(input, output) {
     output$death_growth <- renderGirafe({
         df <- df_reactive_death()
         
-        min_day <- input$day_range_death[1]
-        max_day <- input$day_range_death[2]
-        n_start <- input$death_day1
+        pars <- plot_pars_death()
+        min_day <- pars$min_day
+        max_day <- pars$max_day
+        n_start <- pars$n_start
         
         df_plot <- make_df_plot(df, death, max_day, n_start) %>% 
             mutate(death_growth = death / lag(death)) %>% 
@@ -404,7 +421,7 @@ server <- function(input, output) {
         plot <- make_plot(df_plot, death_growth, min_day) +
             labs(title = glue("Daily death growth rate"),
                  y = "Daily death growth rate",
-                 x = glue("Day after the first {n_start} deaths"))
+                 x = glue("Day after first {n_start} deaths"))
         
         girafe_mod(ggobj = plot)
     })
@@ -433,7 +450,7 @@ server <- function(input, output) {
             group_by(country, date) %>% 
             arrange(date) %>%
             summarise_at(vars(case,death), sum)
-    })
+    }, ignoreNULL = F)
       
         
     output$case_animation <- renderImage({
@@ -451,11 +468,10 @@ server <- function(input, output) {
         df_plot <- make_df_plot(df, case, max_day, n_start)
 
         xlim <- c(min_day, max_day + 5)
-        y_breaks <- c(100,200,500) %>% make_exp_break(3)
 
         plot <- ggplot(df_plot, aes(x = day, y = case, group = country, color = country)) +
             scale_x_continuous(limits = xlim) +
-            scale_y_continuous(trans = "log", breaks = y_breaks, labels = scales::comma)+
+            scale_y_continuous(trans = "log", breaks = exp_breaks, labels = scales::number_format(accuracy = 1))+
             scale_color_tableau("Tableau 20") +
             geom_line(size = 0.5) +
             geom_point(size = 0.8) +
@@ -465,7 +481,7 @@ server <- function(input, output) {
                   plot.title = element_text(face = "bold")) +
             labs(title = "Number of cases, day {frame_along}",
                  y = "Number of cases (log scale)",
-                 x = glue("Day after the first {n_start} cases")) +
+                 x = glue("Day after first {n_start} cases")) +
             transition_reveal(day)
 
         anim_save("case_outfile.gif",
@@ -494,11 +510,10 @@ server <- function(input, output) {
         df_plot <- make_df_plot(df, death, max_day, n_start)
         
         xlim <- c(min_day, max_day + 5)
-        y_breaks <- c(10,20,50) %>% make_exp_break(3)
-        
+
         plot <- ggplot(df_plot, aes(x = day, y = death, group = country, color = country)) +
             scale_x_continuous(limits = xlim) +
-            scale_y_continuous(trans = "log", breaks = y_breaks, labels = scales::comma)+
+            scale_y_continuous(trans = "log", breaks = exp_breaks, labels = scales::number_format(accuracy = 1))+
             scale_color_tableau("Tableau 20") +
             geom_line(size = 0.5) +
             geom_point(size = 0.8) +
@@ -506,7 +521,7 @@ server <- function(input, output) {
             theme_minimal(base_family = "sans", base_size =  11) +
             labs(title = "Number of deaths, day {frame_along}",
                  y = "Number of deaths (log scale)",
-                 x = glue("Day after the first {n_start} deaths")) +
+                 x = glue("Day after first {n_start} deaths")) +
             theme(legend.position = "none",
                   plot.title = element_text(face = "bold")) +
             transition_reveal(day)
