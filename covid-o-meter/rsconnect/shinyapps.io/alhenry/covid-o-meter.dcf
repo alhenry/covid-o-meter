@@ -1,0 +1,13 @@
+name: covid-o-meter
+title: covid-o-meter
+username:
+account: alhenry
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2039734
+bundleId: 2958358
+url: https://alhenry.shinyapps.io/covid-o-meter/
+when: 1585819973.21071
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: www/styles.css
