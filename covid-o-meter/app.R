@@ -19,9 +19,15 @@ library(gganimate)
 library(shinycustomloader)
 library(gifski)
 
-# PREPARATION -------
+#=================
+# PREPARATION
+#=================
+
 DT_case <- fread("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
 DT_death <- fread("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
+
+download.file("https://raw.githubusercontent.com/alhenry/covid-o-meter/master/README.md",
+              "README.md")
 
 walk(list(DT_case, DT_death),
      setnames, c("Province/State", "Country/Region"),
@@ -61,12 +67,10 @@ top_countries <- df_all %>%
 to_include <- c(
     top_countries,
     "India", "Japan", "Indonesia", "Singapore", "Brazil", "South Korea",
-    "South Africa"
+    "South Africa", "UK"
 ) %>% unique
 
-# to_highlight <- c("UK", "US", "China", "Italy", "Indonesia", "South Korea", "")
-
-# Set global options for interactive
+# Set global options for interactive plot
 girafe_mod <- function(...){
     girafe(..., width_svg = 8, height_svg = 6,
            fonts = list(sans = "Lato"),
@@ -80,13 +84,29 @@ girafe_mod <- function(...){
        )
     }
 
-
 # ===========
 # UI
 # ===========
 ui <- navbarPage("Covid-O-Meter",
                  position = "fixed-top",
                  theme = shinytheme("flatly"),
+                 collapsible = T,
+                 selected = "Case statistics",
+    tabPanel(
+      "About",
+      absolutePanel(
+        top = 60, left = 10, bottom = 50, width = "80%",
+        
+        h3("CAUTION", style = "color:red;"),
+        p("If this page is not displayed properly,
+           please refer to the source documentation on GitHub."),
+        a("Go to GitHub", href = "https://github.com/alhenry/covid-o-meter"),
+        
+        hr(),
+        includeMarkdown("README.md")
+        )
+    ),             
+    
     tabPanel(
     "Case statistics",
     # Display plots
@@ -125,10 +145,10 @@ ui <- navbarPage("Covid-O-Meter",
         actionButton("make_plot_case", "Update plots", style="padding:5px 10px;"),
         
         h3("Download plots"),
-        div(style="display: inline-block;vertical-align:top; width: 90px;",
-            numericInput('width_case', "Width (in)", value = 7, min = 1, max = 12, width = '70px')),
-        div(style="display: inline-block;vertical-align:top; width: 90px;",
-            numericInput('height_case', "Height (in)", value = 5, min = 1, max = 12, width = '70px')),
+        div(style="display: inline-block;vertical-align:top; width: 120px;",
+            numericInput('width_case', "Width (in)", value = 7, min = 1, max = 12, width = '80px')),
+        div(style="display: inline-block;vertical-align:top; width: 120px;",
+            numericInput('height_case', "Height (in)", value = 5, min = 1, max = 12, width = '80px')),
         
         downloadButton("dl_case", "Number of cases", style="padding:5px 10px;"),
         p("\n"),
@@ -174,10 +194,10 @@ ui <- navbarPage("Covid-O-Meter",
             actionButton("make_plot_death", "Update plots", style = "padding:5px 10px;"),
             
             h3("Download plots"),
-            div(style="display: inline-block;vertical-align:top; width: 90px;",
-                numericInput('width_death', "Width (in)", value = 7, min = 1, max = 12, width = '70px')),
-            div(style="display: inline-block;vertical-align:top; width: 90px;",
-                numericInput('height_death', "Height (in)", value = 5, min = 1, max = 12, width = '70px')),
+            div(style="display: inline-block;vertical-align:top; width: 120px;",
+                numericInput('width_death', "Width (in)", value = 7, min = 1, max = 12, width = '80px')),
+            div(style="display: inline-block;vertical-align:top; width: 120px;",
+                numericInput('height_death', "Height (in)", value = 5, min = 1, max = 12, width = '80px')),
             
             downloadButton("dl_death", "Number of deaths", style="padding:5px 10px;"),
             p("\n"),
@@ -496,8 +516,8 @@ server <- function(input, output) {
     # Set global options
     options(gganimate.dev_args =
                 list(width = 1280, height = 720, res = 150),
-            gganimate.fps = 30,
-            gganimate.nframes = 300,
+            gganimate.fps = 25,
+            gganimate.nframes = 250,
             gganimate.duration = 15,
             gganimate.end_pause = 50)
     
