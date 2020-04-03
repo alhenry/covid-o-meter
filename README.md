@@ -29,28 +29,27 @@ make their own discoveries.
 
 #### Case statistics
 
-* Number of cases
-* Daily case growth rate = Number of cases on current day / Number of cases on previous day
+* Cumulative Number of cases
+* Number of new cases
 
 #### Death statistics
 
-* Number of deaths
-* Case fatality rate = Number of deaths / Number of cases
-* Daily death growth rate = Number of deaths on current day / Number of deaths on previous day
+* Cumulative number of deaths
+* Number of new deaths
+* Case fatality rate = Number of deaths (cumulative) / Number of cases (cumulative)
 
 #### Animation
 
-* Per day time-lapse of the following plots:
-* Number of cases
-* Number of deaths
+* Number of cases (per-day time-lapse)
+* Number of deaths (per-day time-lapse)
 
 ### Plot elements
 
 #### Y-Axis
 
-The Y-axis represents the corresponding _statistics_ on a log base 2 scale (number of cases / deaths) or a linear scale (daily case / death growth rate and case fatality rate).
+The Y-axis represents the corresponding _statistics_ on a log base 2 scale (default  for number of cumulative / new cases /deaths) or a linear scale (default for case fatality rate).
 
-Log scale is used to better model the exponential nature of the disease spread (for discussion, see e.g. [explainer by John Burn-Murdoch](https://twitter.com/jburnmurdoch/status/1237748598051409921)).
+The log base 2 scale is used to represent doubling rate due to the exponential nature of the disease spread (for discussion, see e.g. [explainer by John Burn-Murdoch](https://twitter.com/jburnmurdoch/status/1237748598051409921)).
 
 #### X-Axis
 
@@ -76,10 +75,10 @@ On mouse hover, each data point (represented by dot) shows:
 
 * Country name
 * Date
-* Day after first N cases / deaths
-* Statistics requested
+* Day after first N cases / deaths (X-axis coordinate)
+* Value of the statistics (Y-axis coordinate)
 
-#### Sidebar parameters
+#### Parameters
 
 The draggable sidebar contains functionality to adjust data and plot parameters as follows:
 
@@ -89,12 +88,15 @@ The draggable sidebar contains functionality to adjust data and plot parameters 
 | Period                           | Adjust range of dates to use in calculation                                                                          |
 | Minimum cases / deaths for day 1 | Minimum number of cases / deaths to be counted as Day 1                                                              |
 | Range of days to display         | Lower and upper limit of day (i.e. the X-axis) to display                                                            |
+| Scale                            | Select between linear / log base 2 scale for Y-Axis                                                                  |
 | Show doubling rate               | Show / hide doubling rate for number of cases / deaths per 1, 3, and 7 days (hover on the lines for description)     |
 
 After adjusting the desired parameters, __press the `Update plots / animation` button__ to see the change
-(`Show doubling rate` will be triggered automatically on click).
 
-_Note:_ Generating a new animation could take ~1-2 minutes to complete
+_Note:_
+
+* `Scale` and `Show doubling rate` will trigger automatic change on click
+* Generating a new animation could take ~2 minutes to complete
 
 #### Download
 The download button will save a static version of the corresponding plot as `.png` file.
@@ -118,4 +120,4 @@ Please read and follow the terms of use of the data.
 
 This work is inspired by other similar works, e.g.
 [Covid-19 charts](https://www.ft.com/coronavirus-latest) by [John Burn-Murdoch](https://twitter.com/jburnmurdoch) of Financial Times,
-[91-Divoc project](https://91-divoc.com/pages/covid-visualization/) by [Wade Fagen-Ulmschneider](https://waf.cs.illinois.edu/)
+[91-Divoc project](https://91-divoc.com/pages/covid-visualization/) by [Wade Fagen-Ulmschneider](https://waf.cs.illinois.edu/), [Covid-19 Tracker](https://vac-lshtm.shinyapps.io/ncov_tracker/) by [Dr Edward Parker](https://www.lshtm.ac.uk/aboutus/people/parker.edward) and [Quentin Leclerc](https://qleclerc.netlify.com/) of The London School of Hygiene & Tropical Medicine

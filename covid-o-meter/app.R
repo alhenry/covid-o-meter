@@ -17,6 +17,7 @@ library(ggiraph)
 library(ggthemes)
 library(gganimate)
 library(shinycustomloader)
+library(shinyWidgets)
 library(gifski)
 
 #=================
@@ -120,39 +121,44 @@ ui <- navbarPage("Covid-O-Meter",
     
     # Sidebar
     fixedPanel(
-        top = 50, right = 20, width = "30%",
+        top = 60, right = 20, width = "30%",
         style = "opacity: 0.90",
         draggable = T,
         
-        h3("Data"),
-        selectizeInput('to_include_case', 'Countries (max 20)', multiple = T,
-                       choices = countries,
-                       selected = to_include,
-                       options = list(maxItems = 20)),
+        h4(tags$b("Data")),
+        pickerInput("to_include_case", "Countries (max 20)",   
+                    choices = countries, 
+                    options = list(`actions-box` = T,
+                                   `liveSearch` = T,
+                                   `maxOptions` = 20,
+                                   `none-selected-text` = "Select at least 1 country"),
+                    selected = to_include,
+                    multiple = T),
         dateRangeInput('date_case', 'Period', 
                        start = date_start, end = date_end),
         
         # parameters for plots
-        h3("Plot Parameters"),
-        
         sliderInput('case_day1', 'Minimum cases for day 1',
                     min = 1, max = 300, value = 100),
         sliderInput('day_range_case', 'Range of days to display',
                     min = 1, max = max_day, value = c(1,40), step = 1),
-        checkboxInput('show_doubling_case', HTML('Show doubling rate<br/>(hover on the lines for description)')),
-        
+ 
         p("\n"),
-        actionButton("make_plot_case", "Update plots", style="padding:5px 10px;"),
+        actionButton("make_plot_case", "Update plots",
+                     style="padding:5px 10px; background-color:#428bca; border-color:#428bca;"),
         
-        h3("Download plots"),
-        div(style="display: inline-block;vertical-align:top; width: 120px;",
-            numericInput('width_case', "Width (in)", value = 7, min = 1, max = 12, width = '80px')),
-        div(style="display: inline-block;vertical-align:top; width: 120px;",
-            numericInput('height_case', "Height (in)", value = 5, min = 1, max = 12, width = '80px')),
+        h4(tags$b("Adjustments"), style="padding-top:10px"),
+        selectInput('scale_case', 'Y-axis scale',
+                    choices = c("Linear", "Log base 2"), selected = "Log base 2"),
+        conditionalPanel(
+          condition = "input.scale_case == 'Log base 2'",
+          checkboxInput('show_doubling_case', HTML('Show doubling rate<br/>(hover on the lines for description)'))
+        ),
         
-        downloadButton("dl_case", "Number of cases", style="padding:5px 10px;"),
+        h4(tags$b("Downloads"), style="padding-top:10px"),
+        downloadButton("dl_case", "Number of cases (cumulative)", style="padding:5px 10px;"),
         p("\n"),
-        downloadButton("dl_case_growth", "Daily case growth rate", style="padding:5px 10px;")
+        downloadButton("dl_case_growth", "Number of new cases", style="padding:5px 10px;")
     )
     ),
     
@@ -163,47 +169,53 @@ ui <- navbarPage("Covid-O-Meter",
             top = 70, left = 10, bottom = 50, width = "65%",
             withLoader(girafeOutput("death_plot"), type = "html", loader = "loader4"),
             p("\n"),
-            withLoader(girafeOutput("cfr_plot"), type = "html", loader = "loader4"),
-            p("\n"),
             withLoader(girafeOutput("death_growth"), type = "html", loader = "loader4"),
+            p("\n"),
+            withLoader(girafeOutput("cfr_plot"), type = "html", loader = "loader4"),
             p("\n")
         ),
         # Sidebar
         fixedPanel(
-            top = 50, right = 20, width = "30%",
+            top = 60, right = 20, width = "30%",
             style = "opacity: 0.90",
             draggable = T,
             
-            h3("Data"),
-            selectizeInput('to_include_death', 'Countries (max 20)', multiple = T,
-                           choices = countries,
-                           selected = to_include),
+            # Data
+            h4(tags$b("Data")),
+            pickerInput("to_include_death", "Countries (max 20)",   
+                        choices = countries, 
+                        options = list(`actions-box` = T,
+                                       `liveSearch` = T,
+                                       `maxOptions` = 20,
+                                       `none-selected-text` = "Select at least 1 country"),
+                        selected = to_include,
+                        multiple = T),
             dateRangeInput('date_death', 'Period', 
                            start = date_start, end = date_end),
-            
-            # parameters for plots
-            h3("Plot Parameters"),
             
             sliderInput('death_day1', 'Minimum deaths for day 1',
                         min = 1, max = 100, value = 10),
             sliderInput('day_range_death', 'Range of days to display',
                         min = 1, max = max_day, value = c(1,40), step = 1),
-            checkboxInput('show_doubling_death', HTML('Show doubling rate<br/>(hover on the lines for description)')),
-            
             p("\n"),
-            actionButton("make_plot_death", "Update plots", style = "padding:5px 10px;"),
+            actionButton("make_plot_death", "Update plots",
+                         style="padding:5px 10px; background-color:#428bca; border-color:#428bca;"),
             
-            h3("Download plots"),
-            div(style="display: inline-block;vertical-align:top; width: 120px;",
-                numericInput('width_death', "Width (in)", value = 7, min = 1, max = 12, width = '80px')),
-            div(style="display: inline-block;vertical-align:top; width: 120px;",
-                numericInput('height_death', "Height (in)", value = 5, min = 1, max = 12, width = '80px')),
-            
-            downloadButton("dl_death", "Number of deaths", style="padding:5px 10px;"),
+            # Adjustments
+            h4(tags$b("Adjustments"), style="padding-top:10px"),
+            selectInput('scale_death', 'Scale',
+                        choices = c("Linear", "Log base 2"), selected = "Log base 2"),
+            conditionalPanel(
+              condition = "input.scale_death == 'Log base 2'",
+              checkboxInput('show_doubling_death', HTML('Show doubling rate<br/>(hover on the lines for description)'))
+            ),
+
+            h4(tags$b("Downloads"), style="padding-top:10px"),
+            downloadButton("dl_death", "Number of deaths (cumulative)", style="padding:5px 10px;"),
             p("\n"),
-            downloadButton("dl_cfr", "Case fatality rate", style="padding:5px 10px;"),
+            downloadButton("dl_death_growth", "Number of new deaths", style="padding:5px 10px;"),
             p("\n"),
-            downloadButton("dl_death_growth", "Daily death growth rate", style="padding:5px 10px;")
+            downloadButton("dl_cfr", "Case fatality rate", style="padding:5px 10px;")
         )
     ),
     
@@ -222,19 +234,23 @@ ui <- navbarPage("Covid-O-Meter",
         ),
         # Sidebar
         fixedPanel(
-            top = 50, right = 20, width = "30%",
+            top = 60, right = 20, width = "30%",
             style = "opacity: 0.90",
             draggable = T,
-            
-            
-            h3("Data"),
-            selectizeInput('to_include_anim', 'Countries (max 20)', multiple = T,
-                           choices = countries, selected = to_include),
+            h4(tags$b("Data")),
+            pickerInput("to_include_anim", "Countries (max 20)",   
+                        choices = countries, 
+                        options = list(`actions-box` = T,
+                                       `liveSearch` = T,
+                                       `maxOptions` = 20,
+                                       `none-selected-text` = "Select at least 1 country"),
+                        selected = to_include,
+                        multiple = T),
             dateRangeInput('date_anim', 'Period', 
                            start = date_start, end = date_end),
             
-            # Animation parameters
-            h3("Plot parameters"),
+            # Adjustments
+            h4(tags$b("Adjustments"), style="padding-top:10px"),
             sliderInput('case_day1_anim', 'Minimum cases for day 1',
                         min = 1, max = 300, value = 100),
             sliderInput('death_day1_anim', 'Minimum deaths for day 1',
@@ -244,7 +260,8 @@ ui <- navbarPage("Covid-O-Meter",
             
             # # Action button
             p("\n"),
-            actionButton("animate", "Update animation", style = "padding:5px 10px;")
+            actionButton("animate", "Update animation",
+                         style="padding:5px 10px; background-color:#428bca; border-color:#428bca;")
             
         )
     )
@@ -362,33 +379,32 @@ server <- function(input, output) {
         n_start <<- pars$n_start
 
         df_plot <<- make_df_plot(df, case, max_day, n_start) %>%
-            make_tooltip(case, n_start, "cases", "cases")
+            make_tooltip(case, n_start, "cases", "total cases")
         
         case_plot <<- make_plot(df_plot, case, min_day) +
-            scale_y_continuous(trans = "log2", breaks = exp_breaks, labels = scales::number_format(accuracy = 1)) +
-            labs(title = glue("Number of cases"),
-                 y = "Number of cases (log scale)",
+            labs(title = "Number of cases (cumulative)",
+                 y = "Number of cases",
                  x = glue("Day after first {n_start} cases"))
         
-        if(input$show_doubling_case){
-          df_slope <- tibble(slope = c(1, 1/3, 1/7),
-                             intercept = log2(n_start),
-                             label = c("Cases doubled\nevery 1 day",
-                                       "Cases doubled\nevery 3 days",
-                                       "Cases doubled\nevery 7 days"))
+        if (input$scale_case == "Log base 2"){
           case_plot <<- case_plot +
-            geom_abline_interactive(
-              aes(slope = slope, tooltip = label, intercept = intercept),
-              data = df_slope, color = "black", alpha = 0.7
-            )
+            scale_y_continuous(trans = "log2", breaks = exp_breaks, labels = scales::number_format(accuracy = 1))
+          if(input$show_doubling_case){
+            df_slope <- tibble(slope = c(1, 1/3, 1/7),
+                               intercept = log2(n_start),
+                               label = glue("Doubled\nevery {x} day{y}", x = c(1,3,7), y = c("", "s", "s")))
+            case_plot <<- case_plot +
+              geom_abline_interactive(
+                aes(slope = slope, tooltip = label, intercept = intercept),
+                data = df_slope, color = "black", alpha = 0.7
+              )
+          }
         }
-        
         
         girafe_mod(ggobj = case_plot)    
     })
     
-    output$dl_case <- make_dl_button("case_plot.png",
-                                     case_plot, input$width_case, input$height_case)
+    output$dl_case <- make_dl_button("case_plot.png", case_plot)
     
     # Daily Case Growth
     output$case_growth <- renderGirafe({
@@ -396,20 +412,24 @@ server <- function(input, output) {
         pars <- plot_pars_case()
       
         df_plot <- df_plot %>%
-          mutate(case_growth = case / lag(case))  %>%
-          make_tooltip(case_growth, n_start, "cases", "daily case growth")
+          mutate(case_growth = case - lag(case))  %>%
+          make_tooltip(case_growth, n_start, "cases", "new cases")
         
         case_growth_plot <<- make_plot(df_plot, case_growth, min_day) +
-          labs(title = glue("Daily case growth rate"),
-               y = "Daily case growth rate",
+          labs(title = "Number of new cases",
+               y = "Number of new cases",
                x = glue("Day after first {n_start} cases"))
+        
+        if (input$scale_case == "Log base 2"){
+          case_growth_plot <<- case_growth_plot +
+            scale_y_continuous(trans = "log2", breaks = exp_breaks, labels = scales::number_format(accuracy = 1))
+        }
         
         girafe_mod(ggobj = case_growth_plot)
   
     })
     
-    output$dl_case_growth <- make_dl_button("case_growth_plot",
-                                            case_growth_plot, input$width_case, input$height_case)
+    output$dl_case_growth <- make_dl_button("case_growth_plot", case_growth_plot)
     
     
     # Death statistics ------
@@ -448,28 +468,33 @@ server <- function(input, output) {
             make_tooltip(death, n_start, "deaths", "deaths")
         
         death_plot <<- make_plot(df_plot, death, min_day) +
-            scale_y_continuous(trans = "log2", breaks = exp_breaks, labels = scales::number_format(accuracy = 1)) +
-            labs(title = glue("Number of deaths"),
-                 y = "Number of deaths (log scale)",
+            labs(title = glue("Number of deaths (cumulative)"),
+                 y = "Number of deaths",
                  x = glue("Day after first {n_start} deaths"))
         
-        if(input$show_doubling_death){
-          df_slope <- tibble(slope = c(1, 1/3, 1/7),
-                             intercept = log2(n_start),
-                             label = c("Deaths doubled\nevery 1 day",
-                                       "Deaths doubled\nevery 3 days",
-                                       "Deaths doubled\nevery 7 days"))
+        if (input$scale_death == "Log base 2"){
           death_plot <<- death_plot +
-            geom_abline_interactive(
-              aes(slope = slope, tooltip = label, intercept = intercept),
-              data = df_slope, color = "black", alpha = 0.7
-            )
+            scale_y_continuous(trans = "log2", breaks = exp_breaks, labels = scales::number_format(accuracy = 1))  
+          if(input$show_doubling_death){
+            df_slope <- tibble(slope = c(1, 1/3, 1/7),
+                               intercept = log2(n_start),
+                               label = c("Deaths doubled\nevery 1 day",
+                                         "Deaths doubled\nevery 3 days",
+                                         "Deaths doubled\nevery 7 days"))
+            death_plot <<- death_plot +
+              geom_abline_interactive(
+                aes(slope = slope, tooltip = label, intercept = intercept),
+                data = df_slope, color = "black", alpha = 0.7
+              )
+          }
         }
+        
+       
         
         girafe_mod(ggobj = death_plot)
     })
     
-    output$dl_death <- make_dl_button("Number of deaths", death_plot,
+    output$dl_death <- make_dl_button("Number of deaths (cumulative)", death_plot,
                                       input$width_death, input$height_death)
     
     # CFR plot
@@ -478,7 +503,7 @@ server <- function(input, output) {
       
         df_plot <- df_plot %>% 
             mutate(cfr = death/case) %>% 
-            make_tooltip(cfr, n_start, "deaths", "deaths")
+            make_tooltip(cfr, n_start, "deaths", "total deaths")
         
         cfr_plot <<- make_plot(df_plot, cfr, min_day) +
             labs(title = glue("Case fatality rate"),
@@ -497,18 +522,23 @@ server <- function(input, output) {
         pars <- plot_pars_death()
         
         df_plot <- df_plot %>% 
-            mutate(death_growth = death / lag(death)) %>% 
-            make_tooltip(death_growth, n_start, "deaths", "daily death growth")
+            mutate(death_growth = death - lag(death)) %>% 
+            make_tooltip(death_growth, n_start, "deaths", "new deaths")
 
         death_growth_plot <<- make_plot(df_plot, death_growth, min_day) +
-            labs(title = glue("Daily death growth rate"),
-                 y = "Daily death growth rate",
+            labs(title = glue("Number of new deaths"),
+                 y = "Number of new deaths",
                  x = glue("Day after first {n_start} deaths"))
+        
+        if (input$scale_death == "Log base 2"){
+          death_growth_plot <<- death_growth_plot +
+            scale_y_continuous(trans = "log2", breaks = exp_breaks, labels = scales::number_format(accuracy = 1))  
+        }
         
         girafe_mod(ggobj = death_growth_plot)
     })
     
-    output$dl_death_growth <- make_dl_button("Daily death growth rate", death_growth_plot,
+    output$dl_death_growth <- make_dl_button("Number of new deaths", death_growth_plot,
                                              input$width_death, input$height_death)
     
     
@@ -566,7 +596,7 @@ server <- function(input, output) {
             theme(legend.position = "none",
                   plot.title = element_text(face = "bold")) +
             labs(title = "Number of cases, day {frame_along}",
-                 y = "Number of cases (log scale)",
+                 y = "Number of cases",
                  x = glue("Day after first {n_start} cases")) +
             transition_reveal(day)
 
@@ -606,7 +636,7 @@ server <- function(input, output) {
             geom_text(aes(x = day + 0.2, label = country), hjust = 0) +
             theme_minimal(base_family = "sans", base_size =  11) +
             labs(title = "Number of deaths, day {frame_along}",
-                 y = "Number of deaths (log scale)",
+                 y = "Number of deaths",
                  x = glue("Day after first {n_start} deaths")) +
             theme(legend.position = "none",
                   plot.title = element_text(face = "bold")) +
@@ -623,19 +653,6 @@ server <- function(input, output) {
         )}, deleteFile = TRUE)
     
 }
-# For testing
-input <- list(
-    to_include_anim = to_include,
-    date_anim = c(date_start, date_end),
-    day_range_anim = c(1,40),
-    day_range_anim = c(1,40),
-    case_day1_anim = 100,
-    death_day1_anim = 10,
-    n_frame =  100,
-    fps = 10,
-    duration = 16
-)
-
 
 # Run the application 
 shinyApp(ui = ui, server = server)

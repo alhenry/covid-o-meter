@@ -5,9 +5,8 @@ account: alhenry
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2039734
-bundleId: 2958358
+bundleId: 2962762
 url: https://alhenry.shinyapps.io/covid-o-meter/
-when: 1585819973.21071
+when: 1585890289.05717
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: www/styles.css
