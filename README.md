@@ -1,5 +1,7 @@
 ## Covid-O-Meter
 
+https://alhenry.shinyapps.io/covid-o-meter/
+
 Covid-O-Meter (or covidometer) is an open access, daily-updated interactive web app designed to
 track and visualise various statistics related to the Covid-19 pandemic.
 
